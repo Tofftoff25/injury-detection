@@ -9,11 +9,60 @@ from threading import Timer
 import traceback
 import sys
 import json
+import base64
+import requests
+from dotenv import load_dotenv
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND_DIR = os.path.join(BASE_DIR, "FRONTEND")
 
 app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path="")
+
+# Load environment variables
+load_dotenv()
+
+# ---------------------------------------------------------------------------
+# SCAN / ROBOFLOW CONFIGURATION
+# ---------------------------------------------------------------------------
+
+app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10 MB upload limit
+
+ROBOFLOW_API_KEY = os.getenv("ROBOFLOW_API_KEY", "").strip()
+ROBOFLOW_API_URL = os.getenv(
+    "ROBOFLOW_API_URL",
+    "https://serverless.roboflow.com"
+).rstrip("/")
+
+ROBOFLOW_WORKSPACE = os.getenv(
+    "ROBOFLOW_WORKSPACE",
+    "ffotatoff"
+).strip()
+
+ROBOFLOW_WORKFLOW_ID = os.getenv(
+    "ROBOFLOW_WORKFLOW_ID",
+    "visible-injury-baseline-1786672508728"
+).strip()
+
+SCAN_REQUEST_TIMEOUT_SECONDS = 45
+
+ALLOWED_IMAGE_TYPES = {
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+}
+
+# Maps model labels to keys in injuries.json
+MODEL_TO_INJURY_KEY = {
+    "abrasions": "cuts and wounds",
+    "abrasion": "cuts and wounds",
+    "cut": "cuts and wounds",
+    "cuts": "cuts and wounds",
+    "wound": "cuts and wounds",
+    "bruise": "bruises",
+    "bruises": "bruises",
+    "burn": "burns",
+    "burns": "burns",
+}
 
 # ---------------------------------------------------------------------------
 # LOAD INJURY DATABASE FROM JSON (with fallback)
@@ -182,6 +231,71 @@ def search_suggestions(query):
             matches.add(mapped)
     return sorted(matches)
 
+def normalize_workflow_output(payload):
+    """Normalize the Roboflow Workflow response into one output dictionary."""
+    if isinstance(payload, list):
+        if not payload:
+            raise ValueError("Workflow returned an empty result.")
+        payload = payload[0]
+
+    if not isinstance(payload, dict):
+        raise ValueError("Workflow returned an unexpected response.")
+
+    return payload
+
+def normalize_model_label(value):
+    return str(value or "").strip().lower()
+
+def map_model_label_to_injury(model_label):
+    """Map a detector class to a safe injuries.json key."""
+    normalized = normalize_model_label(model_label)
+    mapped = MODEL_TO_INJURY_KEY.get(normalized)
+
+    if mapped and mapped in INJURY_DATABASE:
+        return mapped
+
+    return None
+
+def run_injury_workflow(image_bytes):
+    """Run the hosted Workflow without saving the image locally."""
+    if not ROBOFLOW_API_KEY:
+        raise RuntimeError("ROBOFLOW_API_KEY is not configured on the Flask server.")
+
+    encoded_image = base64.b64encode(image_bytes).decode("ascii")
+
+    endpoint = (
+        f"{ROBOFLOW_API_URL}/infer/workflows/"
+        f"{ROBOFLOW_WORKSPACE}/{ROBOFLOW_WORKFLOW_ID}"
+    )
+
+    payload = {
+        "api_key": ROBOFLOW_API_KEY,
+        "inputs": {
+            "image": {
+                "type": "base64",
+                "value": encoded_image,
+            }
+        },
+    }
+
+    response = requests.post(
+        endpoint,
+        json=payload,
+        timeout=SCAN_REQUEST_TIMEOUT_SECONDS,
+    )
+
+    try:
+        response.raise_for_status()
+    except requests.HTTPError as exc:
+        app.logger.error(
+            "Roboflow Workflow failed with status %s: %s",
+            response.status_code,
+            response.text[:1000],
+        )
+        raise RuntimeError("The injury analysis service failed.") from exc
+
+    return normalize_workflow_output(response.json())
+
 # ---------------------------------------------------------------------------
 # ROUTES WITH IMPROVED ERROR HANDLING
 # ---------------------------------------------------------------------------
@@ -270,9 +384,160 @@ def api_injury_detail(key):
         app.logger.error(f"Error in /api/injury/{key}: {traceback.format_exc()}")
         return jsonify({"error": str(e)}), 500
 
+@app.route("/api/scan/status", methods=["GET"])
+def api_scan_status():
+    """Let the frontend check whether laptop testing is configured."""
+    configured = bool(
+        ROBOFLOW_API_KEY
+        and ROBOFLOW_WORKSPACE
+        and ROBOFLOW_WORKFLOW_ID
+    )
+
+    return jsonify({
+        "available": configured,
+        "runtime": "roboflow-workflow",
+        "workflow_configured": configured,
+    })
+
 @app.route("/api/scan", methods=["POST"])
 def api_scan():
-    return jsonify({"error": "Scanning is now performed on-device via TensorFlow.js."}), 405
+    """
+    Accept one captured image, run the Roboflow Workflow, and return a
+    stable contract that can later be implemented by a local TFLite runtime.
+    """
+    try:
+        if not ROBOFLOW_API_KEY:
+            return jsonify({
+                "success": False,
+                "supported": False,
+                "predicted_class": "unsupported",
+                "confidence": 0.0,
+                "error": "The scan service is not configured.",
+            }), 503
+
+        uploaded = request.files.get("image")
+
+        if uploaded is None:
+            return jsonify({
+                "success": False,
+                "supported": False,
+                "predicted_class": "unsupported",
+                "confidence": 0.0,
+                "error": "No image was provided.",
+            }), 400
+
+        content_type = (uploaded.mimetype or "").lower()
+
+        if content_type not in ALLOWED_IMAGE_TYPES:
+            return jsonify({
+                "success": False,
+                "supported": False,
+                "predicted_class": "unsupported",
+                "confidence": 0.0,
+                "error": "Only JPEG, PNG, and WebP images are supported.",
+            }), 415
+
+        image_bytes = uploaded.read()
+
+        if not image_bytes:
+            return jsonify({
+                "success": False,
+                "supported": False,
+                "predicted_class": "unsupported",
+                "confidence": 0.0,
+                "error": "The uploaded image is empty.",
+            }), 400
+
+        result = run_injury_workflow(image_bytes)
+
+        model_class = str(result.get("predicted_class", "unsupported")).strip()
+
+        try:
+            confidence = float(result.get("confidence", 0.0))
+        except (TypeError, ValueError):
+            confidence = 0.0
+
+        confidence = max(0.0, min(confidence, 1.0))
+
+        workflow_supported = bool(result.get("supported", False))
+        injury_key = map_model_label_to_injury(model_class)
+
+        supported = bool(workflow_supported and injury_key)
+
+        detections = result.get("predictions", {})
+        if isinstance(detections, dict):
+            detections = detections.get("predictions", [])
+        if not isinstance(detections, list):
+            detections = []
+
+        response_data = {
+            "success": supported,
+            "supported": supported,
+            "predicted_class": model_class if supported else "unsupported",
+            "model_class": model_class,
+            "injury_key": injury_key if supported else None,
+            "confidence": confidence,
+            "detections": detections,
+        }
+
+        if not supported:
+            if workflow_supported and not injury_key:
+                response_data["message"] = (
+                    "The model found a possible condition, but no validated "
+                    "first-aid guide is mapped to that class."
+                )
+            else:
+                response_data["message"] = (
+                    "The image could not be classified with enough confidence."
+                )
+
+        return jsonify(response_data)
+
+    except requests.Timeout:
+        app.logger.warning("Roboflow Workflow request timed out.")
+        return jsonify({
+            "success": False,
+            "supported": False,
+            "predicted_class": "unsupported",
+            "confidence": 0.0,
+            "error": "Analysis timed out. Please try again.",
+        }), 504
+
+    except requests.RequestException:
+        app.logger.error(
+            "Could not reach Roboflow: %s",
+            traceback.format_exc(),
+        )
+        return jsonify({
+            "success": False,
+            "supported": False,
+            "predicted_class": "unsupported",
+            "confidence": 0.0,
+            "error": "The analysis service is unavailable.",
+        }), 502
+
+    except Exception:
+        app.logger.error(
+            "Error in /api/scan: %s",
+            traceback.format_exc(),
+        )
+        return jsonify({
+            "success": False,
+            "supported": False,
+            "predicted_class": "unsupported",
+            "confidence": 0.0,
+            "error": "The image could not be analyzed.",
+        }), 500
+
+@app.errorhandler(413)
+def image_too_large(_error):
+    return jsonify({
+        "success": False,
+        "supported": False,
+        "predicted_class": "unsupported",
+        "confidence": 0.0,
+        "error": "The image is too large. Maximum size is 10 MB.",
+    }), 413
 
 if __name__ == "__main__":
     print("🚑 Starting A.I.D.E. server...")

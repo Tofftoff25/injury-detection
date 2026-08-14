@@ -1,0 +1,63 @@
+Folder PATH listing
+Volume serial number is 00000016 E45C:BC9C
+C:.
+|   .gitignore.txt
+|   injuries.json
+|   project-tree.txt
+|   README.md
+|   requirements.txt
+|   run.sh
+|   
++---BACKEND
+|       app.py
+|       
+\---FRONTEND
+    |   sw.js
+    |   
+    +---CSS
+    |       styles.css
+    |       
+    +---HTML
+    |       index.html
+    |       
+    +---ICONS
+    |       allergic_reaction.png
+    |       anaphylaxis.png
+    |       bruises.png
+    |       burns.png
+    |       cardiac_arrest.png
+    |       choking.png
+    |       concussion.png
+    |       cuts_and_wounds.png
+    |       drowning.png
+    |       fainting.png
+    |       fracture.png
+    |       heat_stroke.png
+    |       hypothermia.png
+    |       insect_bites.png
+    |       nosebleed.png
+    |       poisoning.png
+    |       seizures.png
+    |       snake_bite.png
+    |       sprains.png
+    |       stroke.png
+    |       
+    +---JS
+    |       analytics.js
+    |       captures.js
+    |       history.js
+    |       main.js
+    |       scan.js
+    |       search.js
+    |       settings.js
+    |       state.js
+    |       ui.js
+    |       utils.js
+    |       voice.js
+    |       
+    +---MODEL
+    |       README.txt
+    |       
+    \---VENDOR
+            tf.min.js
+            
