@@ -17,4 +17,3 @@ A.I.D.E. is a touchscreen-based first-aid guidance system designed for emergency
 1. Install Python dependencies:
    ```bash
    pip install -r requirements.txt
-# injury-detection
