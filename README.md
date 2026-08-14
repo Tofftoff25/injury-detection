@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # A.I.D.E. - AI-Guided Instructional Device for Emergencies
 
 ## Overview
@@ -18,6 +17,4 @@ A.I.D.E. is a touchscreen-based first-aid guidance system designed for emergency
 1. Install Python dependencies:
    ```bash
    pip install -r requirements.txt
-=======
 # injury-detection
->>>>>>> ec8d3b19427584a5f8ebd2dd8d5ca46b88968125
