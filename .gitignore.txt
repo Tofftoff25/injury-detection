@@ -1,0 +1,26 @@
+# Environment variables
+.env
+.env.local
+
+# Dependencies
+node_modules/
+venv/
+env/
+
+# Build outputs
+dist/
+build/
+.next/
+__pycache__/
+
+# Logs and system files
+*.log
+.DS_Store
+Thumbs.db
+
+# Your data (don't upload images yet)
+data/
+images/
+*.jpg
+*.png
+*.jpeg

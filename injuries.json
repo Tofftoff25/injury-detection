@@ -1,0 +1,396 @@
+{
+  "cuts and wounds": {
+    "icon_file": "cuts_and_wounds.png",
+    "level": "Moderate",
+    "steps": [
+      "Wash your hands before touching the wound.",
+      "Apply gentle pressure with a clean cloth or gauze to stop bleeding.",
+      "Rinse the wound with clean water to remove dirt.",
+      "Apply antiseptic wipes around (not inside) the wound.",
+      "Cover with a sterile bandage or gauze pad.",
+      "Seek medical help if bleeding does not stop after 10 minutes."
+    ],
+    "steps_tl": [
+      "Hugasan ang iyong mga kamay bago hawakan ang sugat.",
+      "Idiin nang bahagya gamit ang malinis na tela o gasa para mapigilan ang pagdugo.",
+      "Banlawan ang sugat gamit ang malinis na tubig para matanggal ang dumi.",
+      "Maglagay ng antiseptic wipes sa paligid (hindi sa loob) ng sugat.",
+      "Takpan ng sterile na bandage o gasa.",
+      "Humingi ng tulong medikal kung hindi tumitigil ang pagdugo pagkalipas ng 10 minuto."
+    ]
+  },
+  "burns": {
+    "icon_file": "burns.png",
+    "level": "Moderate",
+    "steps": [
+      "Remove the person from the heat source immediately.",
+      "Cool the burn under running water for 10-20 minutes.",
+      "Do NOT apply ice, butter, or ointments directly on the burn.",
+      "Cover loosely with a sterile, non-stick bandage.",
+      "Do not pop any blisters that form.",
+      "Seek medical help for burns larger than 3 inches or on the face/hands."
+    ],
+    "steps_tl": [
+      "Ilayo agad ang tao mula sa pinagmulan ng init.",
+      "Palamigin ang paso sa ilalim ng tumatakbong tubig sa loob ng 10-20 minuto.",
+      "HUWAG maglagay ng yelo, mantikilya, o anumang pamahid nang direkta sa paso.",
+      "Takpan nang maluwag gamit ang sterile, hindi dumidikit na bandage.",
+      "Huwag pasabugin ang anumang paltos na mabuo.",
+      "Humingi ng tulong medikal para sa paso na mas malaki sa 3 pulgada o nasa mukha/kamay."
+    ]
+  },
+  "sprains": {
+    "icon_file": "sprains.png",
+    "level": "Mild",
+    "steps": [
+      "Rest the injured area - stop any activity right away.",
+      "Ice the area for 15-20 minutes to reduce swelling.",
+      "Compress with an elastic bandage, not too tight.",
+      "Elevate the injured limb above heart level if possible.",
+      "Seek medical help if you cannot bear weight or move the joint."
+    ],
+    "steps_tl": [
+      "Ipahinga ang naapektuhang bahagi — itigil agad ang anumang aktibidad.",
+      "Maglagay ng yelo sa lugar sa loob ng 15-20 minuto para mabawasan ang pamamaga.",
+      "I-compress gamit ang elastic bandage, huwag masyadong mahigpit.",
+      "Itaas ang naapektuhang bahagi nang mas mataas sa puso kung maaari.",
+      "Humingi ng tulong medikal kung hindi kayang tumayo o igalaw ang kasukasuan."
+    ]
+  },
+  "nosebleed": {
+    "icon_file": "nosebleed.png",
+    "level": "Mild",
+    "steps": [
+      "Sit up straight and lean slightly forward (not backward).",
+      "Pinch the soft part of the nose firmly for 10 minutes.",
+      "Breathe through your mouth while pinching.",
+      "Apply a cold compress to the bridge of the nose.",
+      "Seek medical help if bleeding continues after 20 minutes."
+    ],
+    "steps_tl": [
+      "Umupo nang tuwid at yumuko nang bahagya pasulong (hindi paatras).",
+      "Idiin nang mahigpit ang malambot na bahagi ng ilong sa loob ng 10 minuto.",
+      "Huminga sa bibig habang idinidiin ang ilong.",
+      "Maglagay ng malamig na compress sa tuktok ng ilong.",
+      "Humingi ng tulong medikal kung magpapatuloy ang pagdugo pagkalipas ng 20 minuto."
+    ]
+  },
+  "choking": {
+    "icon_file": "choking.png",
+    "level": "Critical",
+    "steps": [
+      "Ask the person: 'Are you choking?' If they cannot speak or cough, act fast.",
+      "Stand behind the person and lean them slightly forward.",
+      "Give 5 firm back blows between the shoulder blades with the heel of your hand.",
+      "If that doesn't work, give 5 abdominal thrusts (Heimlich maneuver).",
+      "Repeat back blows and abdominal thrusts until the object is dislodged.",
+      "Call for emergency help immediately if the person becomes unconscious."
+    ],
+    "steps_tl": [
+      "Tanungin ang tao: 'Nabubulunan ka ba?' Kung hindi makapagsalita o makaubo, kumilos agad.",
+      "Tumayo sa likod ng tao at iyuko nang bahagya pasulong.",
+      "Magbigay ng 5 malakas na tapik sa pagitan ng mga balikat gamit ang bahagi ng palad.",
+      "Kung hindi gumana, magbigay ng 5 mabilis na abdominal thrust (Heimlich maneuver).",
+      "Ulitin ang tapik sa likod at abdominal thrust hanggang matanggal ang bagay.",
+      "Tumawag agad ng tulong pang-emergency kung mawalan ng malay ang tao."
+    ]
+  },
+  "fainting": {
+    "icon_file": "fainting.png",
+    "level": "Critical",
+    "steps": [
+      "Lay the person flat on their back.",
+      "Raise their legs about 12 inches to improve blood flow to the brain.",
+      "Loosen any tight clothing (collar, belt).",
+      "Check that they are breathing normally.",
+      "Do not give food or water until they are fully alert.",
+      "Seek medical help if they do not regain consciousness within 1 minute."
+    ],
+    "steps_tl": [
+      "Ihiga ang tao nang patag sa likod.",
+      "Itaas ang mga binti nang mga 12 pulgada para mapabuti ang daloy ng dugo sa utak.",
+      "Luwagan ang mahigpit na damit (kwelyo, sinturon).",
+      "Tiyakin na normal ang paghinga.",
+      "Huwag magbigay ng pagkain o tubig hangga't hindi pa siya ganap na malay.",
+      "Humingi ng tulong medikal kung hindi pa siya nabalik sa malay sa loob ng 1 minuto."
+    ]
+  },
+  "bruises": {
+    "icon_file": "bruises.png",
+    "level": "Mild",
+    "steps": [
+      "Apply a cold compress or ice pack wrapped in cloth to the area.",
+      "Keep the ice on for 15-20 minutes, several times a day.",
+      "Rest and elevate the bruised area if possible.",
+      "Seek medical help if the bruise is very large, painful, or does not fade."
+    ],
+    "steps_tl": [
+      "Maglagay ng malamig na compress o ice pack na nakabalot sa tela sa lugar.",
+      "Panatilihin ang yelo sa loob ng 15-20 minuto, ilang beses sa isang araw.",
+      "Magpahinga at itaas ang pasang bahagi kung maaari.",
+      "Humingi ng tulong medikal kung sobrang laki, masakit, o hindi nawawala ang pasa."
+    ]
+  },
+  "insect bites": {
+    "icon_file": "insect_bites.png",
+    "level": "Mild",
+    "steps": [
+      "Remove the stinger if visible, by scraping it out (not squeezing).",
+      "Wash the area with soap and water.",
+      "Apply a cold compress to reduce swelling.",
+      "Apply an anti-itch or antihistamine cream if available.",
+      "Seek medical help immediately for signs of severe allergic reaction."
+    ],
+    "steps_tl": [
+      "Alisin ang tibo kung nakikita, sa pamamagitan ng pagkayod (huwag pisilin).",
+      "Hugasan ang lugar gamit ang sabon at tubig.",
+      "Maglagay ng malamig na compress para mabawasan ang pamamaga.",
+      "Maglagay ng anti-itch o antihistamine cream kung meron.",
+      "Humingi agad ng tulong medikal kung may senyales ng matinding allergic reaction."
+    ]
+  },
+  "cardiac arrest": {
+    "icon_file": "cardiac_arrest.png",
+    "level": "Critical",
+    "steps": [
+      "Check the person for responsiveness. Tap them and ask loudly if they are okay.",
+      "If they are not breathing or only gasping, CALL 911 immediately.",
+      "Start chest compressions. Place the heel of one hand on the center of the chest.",
+      "Push hard and fast. Compress at least 2 inches deep at 100-120 compressions per minute.",
+      "Continue CPR until an AED arrives or emergency responders take over."
+    ],
+    "steps_tl": [
+      "Suriin kung may malay ang tao. Tapikin at tanungin nang malakas kung okay lang siya.",
+      "Kung hindi humihinga o pahingal lang, TUMAWAG AGAD sa 911.",
+      "Simulan ang chest compressions. Ilagay ang sakong ng isang kamay sa gitna ng dibdib.",
+      "Pindutin nang malakas at mabilis. I-compress ang dibdib nang hindi bababa sa 2 pulgada ang lalim.",
+      "Ipagpatuloy ang CPR hanggang sa dumating ang isang AED o emergency responders."
+    ]
+  },
+  "stroke": {
+    "icon_file": "stroke.png",
+    "level": "Critical",
+    "steps": [
+      "Use the FAST test: Face, Arms, Speech, Time.",
+      "Face: Ask the person to smile. Does one side droop?",
+      "Arms: Ask them to raise both arms. Does one drift downward?",
+      "Speech: Ask them to repeat a sentence. Is their speech slurred?",
+      "Time: If you see ANY signs, call 911 immediately."
+    ],
+    "steps_tl": [
+      "Gamitin ang FAST test: Face (Mukha), Arms (Braso), Speech (Pagsasalita), Time (Oras).",
+      "Mukha: Pa ngumiti ang tao. Lumalaylay ba ang isang bahagi ng kanyang mukha?",
+      "Braso: Pa itaas ang dalawang braso. Lumulubog ba ang isang braso pababa?",
+      "Pagsasalita: Pa ulit ng isang simpleng pangungusap. Malabo ba ang kanyang pagsasalita?",
+      "Oras: Kung may NAKITA kang anumang senyales, tumawag agad sa 911."
+    ]
+  },
+  "seizures": {
+    "icon_file": "seizures.png",
+    "level": "Moderate",
+    "steps": [
+      "Stay calm and time the seizure. Most stop in 2-3 minutes.",
+      "Protect the person from injury. Move furniture or sharp objects away.",
+      "Gently guide them to the floor and place something soft under their head.",
+      "Do NOT hold them down or try to stop their movements.",
+      "Do NOT put anything in their mouth.",
+      "After the seizure stops, roll them onto their side (recovery position).",
+      "Call 911 if the seizure lasts longer than 5 minutes."
+    ],
+    "steps_tl": [
+      "Manatiling kalmado at orasan ang seizure. Karamihan ay kusang humihinto sa loob ng 2-3 minuto.",
+      "Protektahan ang tao mula sa pinsala. Ilayo ang mga kasangkapan o matutulis na bagay.",
+      "Gabayan sila nang marahan sa sahig at maglagay ng malambot sa ilalim ng kanilang ulo.",
+      "HUWAG silang pigilan o subukang itigil ang kanilang paggalaw.",
+      "HUWAG maglagay ng kahit ano sa kanilang bibig.",
+      "Pagkatapos ng seizure, i-roll sila sa kanilang tagiliran (recovery position).",
+      "Tumawag sa 911 kung ang seizure ay tumagal ng higit sa 5 minuto."
+    ]
+  },
+  "allergic reaction": {
+    "icon_file": "allergic_reaction.png",
+    "level": "Moderate",
+    "steps": [
+      "Assess the severity. Mild symptoms include hives, itching, and a stuffy nose.",
+      "For severe symptoms: difficulty breathing, swelling of face/lips/tongue, wheezing, dizziness.",
+      "If they have an epinephrine auto-injector (EpiPen), help them use it.",
+      "If symptoms are mild, give them an over-the-counter antihistamine if available.",
+      "Remove the allergen if possible (e.g., if stung by a bee, scrape out the stinger).",
+      "Keep them calm and sitting upright to help breathing."
+    ],
+    "steps_tl": [
+      "Suriin ang kalubhaan. Ang banayad na sintomas ay kasama ang pantal, pangangati, at baradong ilong.",
+      "Para sa malalang sintomas: hirap huminga, pamamaga ng mukha/labi/dila, paghingal, pagkahilo.",
+      "Kung mayroon silang epinephrine auto-injector (EpiPen), tulungan silang gamitin ito.",
+      "Kung banayad ang sintomas, bigyan sila ng over-the-counter antihistamine kung available.",
+      "Alisin ang allergen kung maaari (hal., kung natuklaw ng pukyutan, maingat na kayurin ang tibo).",
+      "Panatilihin silang kalmado at nakaupo nang patayo para makatulong sa paghinga."
+    ]
+  },
+  "heat stroke": {
+    "icon_file": "heat_stroke.png",
+    "level": "Critical",
+    "steps": [
+      "Call 911 immediately. Heat stroke is a life-threatening emergency.",
+      "Move the person to a cooler place, out of the sun.",
+      "Remove excess clothing to help their body cool down.",
+      "Cool them rapidly: immerse in cold water, or apply ice packs to neck, groin, and armpits.",
+      "Monitor their breathing and keep them lying down.",
+      "Do NOT give them anything to drink if they are not fully alert or are vomiting."
+    ],
+    "steps_tl": [
+      "Tumawag agad sa 911. Ang heat stroke ay isang emergency na nagbabanta sa buhay.",
+      "Ilipat ang tao sa mas malamig na lugar, malayo sa araw.",
+      "Tanggalin ang sobrang damit para makatulong sa paglamig ng katawan.",
+      "Palamigin sila nang mabilis: isawsaw sa malamig na tubig, o maglagay ng yelo sa leeg, singit, at kilikili.",
+      "Bantayan ang kanilang paghinga at panatilihin silang nakahiga.",
+      "HUWAG bigyan ng kahit ano na inumin kung hindi sila ganap na alerto o nagsusuka."
+    ]
+  },
+  "hypothermia": {
+    "icon_file": "hypothermia.png",
+    "level": "Critical",
+    "steps": [
+      "Call 911 immediately. Hypothermia is a life-threatening emergency.",
+      "Move the person to a warm, dry place out of the cold.",
+      "Remove wet clothing and cover them with warm blankets.",
+      "If they are alert, give them warm (not hot) drinks.",
+      "Apply warm compresses to the neck, chest, and groin.",
+      "Monitor their breathing and keep them lying down."
+    ],
+    "steps_tl": [
+      "Tumawag agad sa 911. Ang hypothermia ay isang emergency na nagbabanta sa buhay.",
+      "Ilipat ang tao sa isang mainit at tuyong lugar na walang lamig.",
+      "Tanggalin ang basang damit at takpan sila ng mainit na kumot.",
+      "Kung may malay, bigyan sila ng mainit (hindi mainit na mainit) na inumin.",
+      "Maglagay ng mainit na compress sa leeg, dibdib, at singit.",
+      "Bantayan ang kanilang paghinga at panatilihin silang nakahiga."
+    ]
+  },
+  "concussion": {
+    "icon_file": "concussion.png",
+    "level": "Moderate",
+    "steps": [
+      "Seek medical help immediately. Concussion is a serious head injury.",
+      "Monitor the person for confusion, dizziness, or loss of consciousness.",
+      "Keep them awake and alert. Do not let them sleep if they are confused.",
+      "Apply a cold compress to any swelling on the head.",
+      "Do not give them aspirin or ibuprofen.",
+      "Seek immediate emergency help if they vomit, have seizures, or lose consciousness."
+    ],
+    "steps_tl": [
+      "Humingi agad ng tulong medikal. Ang concussion ay isang malubhang pinsala sa ulo.",
+      "Bantayan ang tao para sa pagkalito, pagkahilo, o pagkawala ng malay.",
+      "Panatilihin silang gising at alerto. Huwag silang patulugin kung sila ay nalilito.",
+      "Maglagay ng malamig na compress sa anumang pamamaga sa ulo.",
+      "Huwag silang bigyan ng aspirin o ibuprofen.",
+      "Humingi agad ng emergency na tulong kung sila ay nagsusuka, nag-seizure, o nawalan ng malay."
+    ]
+  },
+  "fracture": {
+    "icon_file": "fracture.png",
+    "level": "Moderate",
+    "steps": [
+      "Keep the person still and calm.",
+      "Do not move the injured limb unless absolutely necessary.",
+      "Apply a cold compress or ice pack to reduce swelling.",
+      "Stabilize the area with a splint or padding.",
+      "Seek medical help immediately.",
+      "Do not give food or water in case surgery is needed."
+    ],
+    "steps_tl": [
+      "Panatilihing tahimik at kalmado ang tao.",
+      "Huwag igalaw ang nasugatang bahagi maliban kung talagang kinakailangan.",
+      "Maglagay ng malamig na compress o ice pack para mabawasan ang pamamaga.",
+      "Patatagin ang lugar gamit ang splint o padding.",
+      "Humingi agad ng tulong medikal.",
+      "Huwag magbigay ng pagkain o tubig kung sakaling kailangan ng operasyon."
+    ]
+  },
+  "anaphylaxis": {
+    "icon_file": "anaphylaxis.png",
+    "level": "Critical",
+    "steps": [
+      "Call 911 immediately. Anaphylaxis is a life-threatening emergency.",
+      "If they have an epinephrine auto-injector (EpiPen), use it immediately.",
+      "Have them lie down with their legs elevated to improve blood flow.",
+      "Loosen tight clothing and keep them calm.",
+      "Monitor their breathing and be ready to perform CPR if they stop breathing.",
+      "Do NOT give them anything to drink or eat.",
+      "Stay with them until emergency responders arrive."
+    ],
+    "steps_tl": [
+      "Tumawag agad sa 911. Ang anaphylaxis ay isang emergency na nagbabanta sa buhay.",
+      "Kung mayroon silang epinephrine auto-injector (EpiPen), gamitin ito agad.",
+      "Ipahiga sila nang nakataas ang mga binti para mapabuti ang daloy ng dugo.",
+      "Luwagan ang mahigpit na damit at panatilihin silang kalmado.",
+      "Bantayan ang kanilang paghinga at maging handa na mag-CPR kung sila ay huminto sa paghinga.",
+      "HUWAG bigyan ng kahit ano na inumin o pagkain.",
+      "Manatili sa kanila hanggang sa dumating ang emergency responders."
+    ]
+  },
+  "poisoning": {
+    "icon_file": "poisoning.png",
+    "level": "Critical",
+    "steps": [
+      "Call Poison Control or 911 immediately.",
+      "If the poison was inhaled, move the person to fresh air.",
+      "If the poison is on the skin, remove contaminated clothing and rinse skin with water.",
+      "Do NOT induce vomiting unless instructed by Poison Control.",
+      "Keep the person calm and monitor their breathing.",
+      "Save the poison container or label if possible to show medical professionals."
+    ],
+    "steps_tl": [
+      "Tumawag agad sa Poison Control o 911.",
+      "Kung nalanghap ang lason, ilipat ang tao sa sariwang hangin.",
+      "Kung ang lason ay nasa balat, tanggalin ang kontaminadong damit at banlawan ang balat ng tubig.",
+      "HUWAG pagsukahin ang tao maliban kung inutusan ng Poison Control.",
+      "Panatilihing kalmado ang tao at bantayan ang kanilang paghinga.",
+      "Itabi ang lalagyan o label ng lason kung maaari para ipakita sa mga medical professionals."
+    ]
+  },
+  "drowning": {
+    "icon_file": "drowning.png",
+    "level": "Critical",
+    "steps": [
+      "Call 911 immediately.",
+      "Remove the person from the water as quickly and safely as possible.",
+      "Check if they are breathing. If not, start CPR immediately.",
+      "If they are breathing, place them in the recovery position (on their side).",
+      "Keep them warm with blankets or clothing.",
+      "Monitor their breathing and be ready to perform CPR if needed.",
+      "Do not try to force water out of their lungs."
+    ],
+    "steps_tl": [
+      "Tumawag agad sa 911.",
+      "Alisin ang tao sa tubig nang mabilis at ligtas hangga't maaari.",
+      "Suriin kung humihinga. Kung hindi, simulan agad ang CPR.",
+      "Kung humihinga, ilagay sila sa recovery position (sa kanilang tagiliran).",
+      "Panatilihin silang mainit gamit ang mga kumot o damit.",
+      "Bantayan ang kanilang paghinga at maging handa na mag-CPR kung kinakailangan.",
+      "Huwag subukang pwersahang ilabas ang tubig sa kanilang baga."
+    ]
+  },
+  "snake bite": {
+    "icon_file": "snake_bite.png",
+    "level": "Critical",
+    "steps": [
+      "Call 911 immediately. Snake bites are life-threatening emergencies.",
+      "Keep the person still and calm to slow the spread of venom.",
+      "Remove any jewelry or tight clothing near the bite area.",
+      "Clean the wound with soap and water.",
+      "Immobilize the affected limb and keep it below heart level.",
+      "Do NOT apply ice, tourniquet, or cut the wound.",
+      "Try to remember the color and shape of the snake for identification."
+    ],
+    "steps_tl": [
+      "Tumawag agad sa 911. Ang kagat ng ahas ay isang emergency na nagbabanta sa buhay.",
+      "Panatilihing tahimik at kalmado ang tao para mapabagal ang pagkalat ng lason.",
+      "Tanggalin ang anumang alahas o masikip na damit malapit sa kagat.",
+      "Hugasan ang sugat ng sabon at tubig.",
+      "I-immobilize ang apektadong bahagi at panatilihin itong mas mababa sa antas ng puso.",
+      "HUWAG maglagay ng yelo, tourniquet, o hiwain ang sugat.",
+      "Subukang tandaan ang kulay at hugis ng ahas para sa pagkilala."
+    ]
+  }
+}

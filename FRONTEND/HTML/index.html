@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="aide-build" content="v5">
+<title>A.I.D.E. — AI-Guided Instructional Device for Emergencies</title>
+<link rel="stylesheet" href="/CSS/styles.css">
+</head>
+<body>
+
+<!-- ===== LOADING SCREEN ===== -->
+<div id="loading-screen">
+  <div class="loading-logo">🚑 A.I.D.E.</div>
+  <div class="loading-subtitle">AI-Guided Instructional Device for Emergencies</div>
+  <div class="loading-spinner"></div>
+  <div class="loading-status" id="loading-status">Loading system...</div>
+</div>
+
+<!-- ===== AFK / IDLE SCREEN ===== -->
+<div id="afk-screen" class="afk-screen hidden">
+  <div class="afk-content">
+    <div class="afk-logo">🚑</div>
+    <h1 class="afk-title">A.I.D.E.</h1>
+    <p class="afk-subtitle">AI-Guided Instructional Device for Emergencies</p>
+    <p class="afk-hint">Tap anywhere to wake</p>
+    <div class="afk-pulse"></div>
+  </div>
+</div>
+
+<!-- ===== CONFIRM MODAL ===== -->
+<div id="confirm-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-label="Confirm action">
+  <div class="confirm-panel">
+    <h3 id="confirm-title" style="margin: 0 0 8px 0; font-size: 1.1rem;">Confirm</h3>
+    <p id="confirm-message" style="margin: 0 0 16px 0; color: var(--muted);">Are you sure?</p>
+    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+      <button id="confirm-cancel-btn" class="btn btn-back" aria-label="Cancel">Cancel</button>
+      <button id="confirm-ok-btn" class="btn btn-primary" aria-label="Confirm">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MAIN APP ===== -->
+<div class="app-layout">
+  <div class="main-content" id="main-content">
+    <header class="app-header">
+      <div class="header-title">
+        <h1>A.I.D.E.</h1>
+        <p data-i18n="tagline">AI-Guided Instructional Device for Emergencies</p>
+      </div>
+
+      <div class="header-actions">
+        <div class="hotline-bar">
+          <span class="hotline-label" data-i18n="hotlineLabel">EMERGENCY HOTLINES:</span>
+          <span class="hotline-number">911</span>
+          <span class="hotline-sep">|</span>
+          <span class="hotline-number">117</span>
+          <span class="hotline-sep">|</span>
+          <span class="hotline-number">143</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ===================================================== -->
+    <!-- GUIDE TAB                                              -->
+    <!-- ===================================================== -->
+    <div id="tab-guide" class="tab-panel">
+
+      <!-- ---- Guide: browse screen ---- -->
+      <main id="home-screen" class="screen">
+        <p class="helper-text" data-i18n="helperText">Point the camera at the injury to scan it, or type / tap the injury below.</p>
+
+        <section class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Guides Viewed</div>
+            <div class="stat-value" id="stat-guides-viewed">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Captures Saved</div>
+            <div class="stat-value" id="stat-captures-saved">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">In Trash</div>
+            <div class="stat-value" id="stat-trash-count">0</div>
+          </div>
+        </section>
+
+        <div class="search-row">
+          <div class="search-wrap">
+            <input type="text" id="search-input" data-i18n-placeholder="searchPlaceholder" placeholder="Type an injury..." autocomplete="off">
+            <ul id="suggestion-list" class="suggestion-list hidden"></ul>
+          </div>
+          <button id="search-btn" class="btn btn-primary" aria-label="Search" data-i18n="searchBtn">Search</button>
+          <button id="scan-btn" class="btn btn-danger" aria-label="Open camera scanner" data-i18n="scanBtn">📷 Scan</button>
+        </div>
+
+        <p id="status-message" class="status-message" role="status" aria-live="polite"></p>
+
+        <section class="quick-access">
+          <h3 class="section-heading" style="color: var(--critical-fg);">🚨 LIFE-THREATENING EMERGENCIES</h3>
+          <div id="quick-access-grid" class="injury-grid"></div>
+        </section>
+
+        <h2 class="section-heading" data-i18n="commonInjuries">All Injuries & Conditions</h2>
+        <div id="injury-grid" class="injury-grid"></div>
+
+        <div id="tips-container" style="
+          margin: 20px 0 10px 0;
+          padding: 10px 14px;
+          background: rgba(255,255,255,0.12);
+          border-radius: var(--radius-sm);
+          border: 1px solid var(--glass-border);
+          min-height: 20px;
+          max-height: 150px;
+          overflow-y: auto;
+          transition: all 0.3s ease;
+        "></div>
+
+        <p id="debug-info" style="color: var(--muted); font-size: 12px; margin-top: 10px; text-align: center;"></p>
+      </main>
+
+      <!-- ---- Guide: instruction screen (carousel) ---- -->
+      <main id="instruction-screen" class="screen hidden">
+        <div class="instruction-header">
+          <button id="back-btn" class="btn btn-back" data-i18n="backBtn">← Back</button>
+          <img id="instruction-icon" class="instruction-icon" src="" alt="">
+          <div style="flex:1; min-width:0;">
+            <h2 id="instruction-title" style="margin:0;"></h2>
+            <span id="instruction-category" style="font-size:0.75rem; color:var(--muted);"></span>
+          </div>
+        </div>
+
+        <!-- Carousel container -->
+        <div class="carousel-container">
+          <div class="carousel-slide" id="carousel-slide">
+            <!-- Dynamically filled -->
+          </div>
+        </div>
+
+        <!-- Navigation & pagination -->
+        <div class="carousel-nav">
+          <button id="carousel-prev" class="btn btn-back" aria-label="Previous step">‹ Prev</button>
+          <div id="carousel-dots" class="carousel-dots"></div>
+          <button id="carousel-next" class="btn btn-primary" aria-label="Next step">Next ›</button>
+        </div>
+
+        <!-- Controls: pause/play + step counter -->
+        <div class="carousel-controls">
+          <button id="carousel-pause" class="carousel-play-btn" aria-label="Pause voice &amp; auto-advance">
+            <span class="carousel-play-icon">⏸</span>
+          </button>
+          <span id="carousel-progress" class="carousel-progress">Step 1 of 4</span>
+        </div>
+
+        <p class="disclaimer" data-i18n="disclaimer">
+          This is first-aid guidance only and does not replace professional medical care.
+          Call emergency services for serious injuries.
+        </p>
+      </main>
+    </div>
+
+    <!-- ===================================================== -->
+    <!-- SUPPLIES TAB (placeholder)                             -->
+    <!-- ===================================================== -->
+    <div id="tab-supplies" class="tab-panel hidden">
+      <main class="screen placeholder-screen">
+        <div class="placeholder-icon">🧰</div>
+        <h2>Supplies</h2>
+        <p>A checklist of what's in this kit — and what's running low — is coming soon.</p>
+      </main>
+    </div>
+
+    <!-- ===================================================== -->
+    <!-- EMERGENCY TAB (placeholder)                            -->
+    <!-- ===================================================== -->
+    <div id="tab-emergency" class="tab-panel hidden">
+      <main class="screen placeholder-screen">
+        <div class="placeholder-icon">🚨</div>
+        <h2>Emergency</h2>
+        <p>One-tap emergency calling and location sharing are coming soon.</p>
+        <div class="emergency-hotlines-preview">
+          <div class="hotline-chip"><strong>911</strong><span>National Emergency</span></div>
+          <div class="hotline-chip"><strong>117</strong><span>PNP Hotline</span></div>
+          <div class="hotline-chip"><strong>143</strong><span>Red Cross</span></div>
+        </div>
+      </main>
+    </div>
+
+    <!-- ===================================================== -->
+    <!-- SETTINGS TAB                                           -->
+    <!-- ===================================================== -->
+    <div id="tab-settings" class="tab-panel hidden">
+      <main class="screen settings-screen">
+
+        <section class="settings-section">
+          <h3 class="settings-section-title">⚙️ Preferences</h3>
+
+          <div class="settings-group">
+            <label class="settings-label" data-i18n="textSizeLabel">Text Size</label>
+            <div class="segmented" id="text-size-control" role="radiogroup" aria-label="Text size">
+              <button type="button" class="segmented-btn" data-value="normal" data-i18n="sizeNormal">Normal</button>
+              <button type="button" class="segmented-btn" data-value="large" data-i18n="sizeLarge">Large</button>
+              <button type="button" class="segmented-btn" data-value="xlarge" data-i18n="sizeXLarge">Extra Large</button>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <label class="settings-label" data-i18n="darkModeLabel">Dark Mode</label>
+            <button type="button" id="dark-toggle" class="toggle-switch" role="switch" aria-checked="false">
+              <span class="toggle-knob"></span>
+            </button>
+          </div>
+
+          <div class="settings-group">
+            <label class="settings-label" data-i18n="voiceLabel">Read Instructions Aloud</label>
+            <button type="button" id="voice-toggle" class="toggle-switch" role="switch" aria-checked="false">
+              <span class="toggle-knob"></span>
+            </button>
+          </div>
+
+          <div class="settings-group">
+            <label class="settings-label" data-i18n="languageLabel">Language</label>
+            <div class="segmented" id="language-control" role="radiogroup" aria-label="Language">
+              <button type="button" class="segmented-btn" data-value="en">English</button>
+              <button type="button" class="segmented-btn" data-value="tl">Filipino</button>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <label class="settings-label" for="voice-select">Voice</label>
+            <select id="voice-select" class="voice-select">
+              <option value="auto">Auto-detect</option>
+            </select>
+          </div>
+
+          <div class="settings-group">
+            <label class="settings-label">Idle Timeout</label>
+            <div class="segmented" id="idle-control" role="radiogroup" aria-label="Idle timeout">
+              <button type="button" class="segmented-btn" data-value="60">1 min</button>
+              <button type="button" class="segmented-btn" data-value="300">5 min</button>
+              <button type="button" class="segmented-btn" data-value="600">10 min</button>
+              <button type="button" class="segmented-btn" data-value="0">Off</button>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <label class="settings-label">Screensaver</label>
+            <button type="button" id="settings-afk-btn" class="btn btn-back" style="margin: 0;">🖥️ Start Screensaver</button>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <h3 class="settings-section-title">📸 Captures <span id="settings-captures-count" class="badge"></span></h3>
+          <div id="settings-captures-grid" class="captures-grid-inline">
+            <p style="grid-column:1/-1; text-align:center; color:var(--muted);">No captures yet.</p>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <h3 class="settings-section-title">🗑️ Recently Deleted <span id="settings-trash-count" class="badge"></span></h3>
+          <p class="trash-subtitle">Items stay in trash for 30 days before automatic deletion.</p>
+          <div id="settings-trash-list"></div>
+          <div class="trash-actions">
+            <button id="trash-restore-all-btn" class="btn btn-primary">♻️ Restore All</button>
+            <button id="trash-empty-btn" class="btn btn-danger">🗑️ Empty Trash</button>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <h3 class="settings-section-title">🕓 Recent Actions</h3>
+          <ul id="settings-history-list" class="history-list-inline">
+            <li class="history-empty">No actions yet.</li>
+          </ul>
+          <button id="settings-clear-history-btn" class="btn btn-danger" style="margin-top: 10px;">🗑️ Clear History</button>
+        </section>
+
+        <section class="settings-section">
+          <h3 class="settings-section-title">📊 Analytics</h3>
+          <button id="settings-analytics-btn" class="btn btn-back">Reset Analytics</button>
+        </section>
+
+      </main>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== BOTTOM TAB BAR ===== -->
+<nav class="app-tabbar" id="app-tabbar" role="tablist" aria-label="Main navigation">
+  <button class="tab-btn active" data-tab="guide" role="tab" aria-selected="true">
+    <span class="tab-icon">📖</span>
+    <span class="tab-label">Guide</span>
+  </button>
+  <button class="tab-btn" data-tab="supplies" role="tab" aria-selected="false">
+    <span class="tab-icon">🧰</span>
+    <span class="tab-label">Supplies</span>
+  </button>
+  <button class="tab-btn" data-tab="emergency" role="tab" aria-selected="false">
+    <span class="tab-icon">🚨</span>
+    <span class="tab-label">Emergency</span>
+  </button>
+  <button class="tab-btn" data-tab="settings" role="tab" aria-selected="false">
+    <span class="tab-icon">⚙️</span>
+    <span class="tab-label">Settings</span>
+  </button>
+</nav>
+
+<!-- ===== SCAN OVERLAY ===== -->
+<div id="scan-overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-label="Camera scan">
+  <div class="scan-panel">
+    <div class="scan-viewfinder">
+      <video id="scan-video" autoplay playsinline muted></video>
+      <div class="scan-frame"></div>
+    </div>
+    <canvas id="scan-canvas" class="hidden"></canvas>
+    <p id="scan-status" class="scan-status" aria-live="polite" data-i18n="scanInstruction">Point the camera at the injury and hold steady...</p>
+    <div class="scan-actions">
+      <button id="scan-capture-btn" class="btn btn-primary scan-capture-btn" data-i18n="scanCapture">📸 Capture &amp; Analyze</button>
+      <button id="scan-cancel-btn" class="btn btn-back" data-i18n="scanCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="/VENDOR/tf.min.js"></script>
+<script type="module" src="/JS/main.js"></script>
+</body>
+</html>
