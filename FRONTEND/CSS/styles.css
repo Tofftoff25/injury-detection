@@ -708,6 +708,15 @@ body {
   display: block;
 }
 
+#scan-canvas {
+  width: 100%;
+  border-radius: var(--radius-sm);
+  background: #000000;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  display: block;
+}
+
 .scan-frame {
   position: absolute;
   top: 50%;
@@ -1758,7 +1767,12 @@ html[data-dark="true"] .app-header .header-title h1 {
 
 .carousel-slide .carousel-slide-item {
   scroll-snap-align: start;
-  scroll-snap-stop: always;
+  /* scroll-snap-stop: always removed — per spec it forces BOTH user
+     flicks AND programmatic scrollTo() jumps (tapping a distant card,
+     clicking a distant dot) to stop at every intermediate snap point
+     instead of animating cleanly to the target, causing laggy
+     multi-stop motion and a mismatch between the displayed step number
+     and where the scroll actually lands. */
   flex: 0 0 31% !important;
   width: auto !important;
   min-width: 0 !important;
@@ -1958,4 +1972,30 @@ body.instruction-active #instruction-screen .disclaimer {
   body.instruction-active #instruction-screen {
     padding: 12px 16px 14px;
   }
+}
+
+.scan-status-error {
+    color: var(--critical-fg, #ff5c5c);
+}
+
+.scan-status-detail {
+    font-size: 0.8em;
+    opacity: 0.75;
+    display: block;
+    margin-top: 4px;
+}
+
+.scan-upload-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+.scan-upload-divider {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.scan-upload-btn {
+  cursor: pointer;
 }

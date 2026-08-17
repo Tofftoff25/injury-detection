@@ -56,6 +56,17 @@ const carouselNext = document.getElementById('carousel-next');
 const carouselPause = document.getElementById('carousel-pause');
 const carouselProgress = document.getElementById('carousel-progress');
 
+const appHeaderEl = document.querySelector('.app-header');
+
+// Belt-and-suspenders header hide/show: toggles the CSS class (for
+// styling/animation) AND sets the inline style directly, so the header
+// is guaranteed to hide regardless of any CSS specificity surprise
+// elsewhere in the stylesheet.
+function setInstructionActive(active) {
+    document.body.classList.toggle('instruction-active', active);
+    if (appHeaderEl) appHeaderEl.style.display = active ? 'none' : '';
+}
+
 let autoSlideTimer = null;
 let isAutoSlidePaused = false;
 const AUTO_SLIDE_DELAY = 6000;
@@ -81,9 +92,9 @@ export function showTab(tabName) {
 
     if (tabName !== 'guide') {
         stopSpeaking();
-        document.body.classList.remove('instruction-active');
+        setInstructionActive(false);
     } else if (!instructionScreen.classList.contains('hidden')) {
-        document.body.classList.add('instruction-active');
+        setInstructionActive(true);
     }
 
     if (tabName === 'settings') {
@@ -103,7 +114,7 @@ export function showHomeScreen() {
     clearAutoSlideTimer();
     instructionScreen.classList.add('hidden');
     homeScreen.classList.remove('hidden');
-    document.body.classList.remove('instruction-active');
+    setInstructionActive(false);
     statusMessage.textContent = '';
     document.getElementById('search-input').value = '';
     hideSuggestions();
@@ -431,7 +442,7 @@ export function showInstructionScreen(data) {
 
     homeScreen.classList.add('hidden');
     instructionScreen.classList.remove('hidden');
-    document.body.classList.add('instruction-active');
+    setInstructionActive(true);
 
     renderAllSteps();
     goToStep(0);
@@ -750,9 +761,6 @@ export function initUI() {
     carouselNext?.addEventListener('click', () => nextStep());
     carouselPause?.addEventListener('click', toggleAutoSlide);
 
-    document.getElementById('settings-afk-btn')?.addEventListener('click', () => {
-        if (window._showAfkScreen) window._showAfkScreen();
-    });
     document.getElementById('settings-clear-history-btn')?.addEventListener('click', async () => {
         const confirmed = await showConfirm('Clear History', 'All history will be moved to trash. You can restore within 30 days.');
         if (confirmed) {

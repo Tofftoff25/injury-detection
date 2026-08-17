@@ -14,7 +14,7 @@ import {
     renderInjuryCards, renderCaptures, renderTrashList,
     renderHistoryList, initUI, showConfirm, hideConfirm, showTab
 } from './ui.js';
-import { startCamera, stopCamera, captureAndClassify, ensureModelLoaded, checkModelExists } from './scan.js';
+import { startCamera, stopCamera, captureAndClassify, ensureModelLoaded, checkModelExists, classifyWithBackend } from './scan.js';
 
 // ---- DOM refs ----
 const afkScreen = document.getElementById('afk-screen');
@@ -25,14 +25,22 @@ const scanCanvas = document.getElementById('scan-canvas');
 const scanStatus = document.getElementById('scan-status');
 const scanCaptureBtn = document.getElementById('scan-capture-btn');
 const scanCancelBtn = document.getElementById('scan-cancel-btn');
+const scanUploadInput = document.getElementById('scan-upload-input');
 
 // ---- AFK / IDLE ----
 let afkTimer = null;
 let idleTimeout = 300;
 
+function syncAfkToggleUI(isActive) {
+    const afkToggle = document.getElementById('afk-toggle');
+    if (afkToggle) afkToggle.setAttribute('aria-checked', String(isActive));
+}
+
 function showAfkScreen() {
+    setAfk(true);
     afkScreen.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
+    syncAfkToggleUI(true);
 }
 
 function hideAfkScreen() {
@@ -40,6 +48,7 @@ function hideAfkScreen() {
     afkScreen.classList.add('hidden');
     document.body.style.overflow = '';
     resetIdleTimer();
+    syncAfkToggleUI(false);
 }
 
 function resetIdleTimer() {
@@ -57,7 +66,19 @@ function setupIdle() {
     afkScreen.addEventListener('touchstart', hideAfkScreen);
 
     window._resetAfkTimer = resetIdleTimer;
-    window._showAfkScreen = () => { setAfk(true); showAfkScreen(); };
+    window._showAfkScreen = showAfkScreen;
+    window._hideAfkScreen = hideAfkScreen;
+
+    // Screensaver toggle switch (Settings tab) — reflects and controls
+    // AFK state in both directions: toggling enters/exits AFK mode, and
+    // dismissing the AFK screen by tapping it flips the toggle back off.
+    const afkToggle = document.getElementById('afk-toggle');
+    if (afkToggle) {
+        afkToggle.addEventListener('click', () => {
+            if (afkScreen.classList.contains('hidden')) showAfkScreen();
+            else hideAfkScreen();
+        });
+    }
 }
 
 function loadIdleTimeout() {
@@ -177,6 +198,60 @@ async function loadInjuryGrid() {
     }
 }
 
+// ---- Scan overlay ----
+async function handleUpload(file) {
+    if (!file) return;
+
+    freezeCapturedFrame();
+    const ctx = scanCanvas.getContext('2d');
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    await new Promise((resolve) => {
+        img.onload = () => {
+            scanCanvas.width = img.naturalWidth;
+            scanCanvas.height = img.naturalHeight;
+            ctx.drawImage(img, 0, 0);
+            URL.revokeObjectURL(objectUrl);
+            resolve();
+        };
+        img.src = objectUrl;
+    });
+
+    scanStatus.textContent = '🔍 Analyzing image...';
+    scanCaptureBtn.disabled = true;
+
+    try {
+        const result = await classifyWithBackend(file);
+        const confidence = Number(result.confidence || 0);
+
+        if (result.supported && result.injury_key) {
+            scanStatus.textContent = `✅ ${result.model_class} detected (${Math.round(confidence * 100)}%)`;
+            setTimeout(() => {
+                closeScanOverlay();
+                openInjury(result.injury_key);
+            }, 1200);
+            return;
+        }
+
+        const pct = Math.round(confidence * 100);
+        const guess = result.model_class && result.model_class !== 'unsupported'
+            ? `Best guess: ${result.model_class} (${pct}% confidence)`
+            : `No confident detection (${pct}% confidence)`;
+        scanStatus.innerHTML = `❓ ${result.message || "Couldn't confidently identify this."}<br><span class="scan-status-detail">${guess}</span>`;
+
+        unfreezeCapturedFrame();
+        scanCaptureBtn.disabled = false;
+        scanCaptureBtn.textContent = '🔁 Try Again';
+    } catch (err) {
+        scanStatus.textContent = '⚠️ ' + (err.message || 'The analysis service is unavailable.');
+        scanStatus.classList.add('scan-status-error');
+        unfreezeCapturedFrame();
+        scanCaptureBtn.disabled = false;
+        scanCaptureBtn.textContent = '🔁 Try Again';
+    }
+}
+
 // ---- Scan UI ----
 async function openScanOverlay() {
     stopSpeaking();
@@ -207,11 +282,22 @@ async function openScanOverlay() {
     }
 }
 
+function unfreezeCapturedFrame() {
+    scanCanvas.classList.add('hidden');
+    scanVideo.classList.remove('hidden');
+}
+
 function closeScanOverlay() {
+    unfreezeCapturedFrame();   // NEW
     scanOverlay.classList.add('hidden');
     stopCamera(scanVideo);
     scanCaptureBtn.textContent = '📸 Capture';
     scanCaptureBtn.disabled = false;
+}
+
+function freezeCapturedFrame() {
+    scanVideo.classList.add('hidden');
+    scanCanvas.classList.remove('hidden');
 }
 
 async function handleCapture() {
@@ -219,34 +305,56 @@ async function handleCapture() {
         scanStatus.textContent = '❌ Camera not ready.';
         return;
     }
+
     scanStatus.textContent = '📸 Capturing...';
+    scanStatus.classList.remove('scan-status-error');
     scanCaptureBtn.disabled = true;
+
     try {
         const result = await new Promise((resolve) => {
-            captureAndClassify(scanVideo, scanCanvas, resolve);
+            captureAndClassify(
+                scanVideo,
+                scanCanvas,
+                resolve,
+                () => {
+                    freezeCapturedFrame();   // NEW — show the actual captured photo
+                    scanStatus.textContent = '🔍 Analyzing image...';
+                }
+            );
         });
-        if (result.success && result.label !== 'unknown') {
-            scanStatus.textContent = `✅ ${result.label} (${Math.round(result.confidence * 100)}%)`;
+
+        if (result.success && result.supported) {
+            scanStatus.textContent = `✅ ${result.label} detected (${Math.round(result.confidence * 100)}%)`;
             setTimeout(() => {
                 closeScanOverlay();
                 openInjury(result.label);
-            }, 1500);
-        } else {
-            scanStatus.textContent = '📸 Image captured. Use search to find injury.';
-            setTimeout(() => {
-                closeScanOverlay();
-                const statusEl = document.getElementById('status-message');
-                statusEl.textContent = '📷 Image captured! Use Search to find the right injury.';
-                statusEl.classList.add('info');
-                setTimeout(() => {
-                    statusEl.textContent = '';
-                    statusEl.classList.remove('info');
-                }, 3000);
-            }, 1500);
+            }, 1200);
+            return;
         }
+
+        const isServiceError = result.label === 'error';
+
+        if (isServiceError) {
+            scanStatus.textContent = '⚠️ ' + (result.message || 'The analysis service is unavailable.');
+        } else {
+            const pct = Math.round((result.confidence || 0) * 100);
+            const guess = result.modelClass && result.modelClass !== 'unsupported'
+                ? `Best guess: ${result.modelClass} (${pct}% confidence)`
+                : `No confident detection (${pct}% confidence)`;
+            scanStatus.innerHTML = `❓ ${result.message || "Couldn't confidently identify this."}<br><span class="scan-status-detail">${guess}</span>`;
+        }
+        scanStatus.classList.toggle('scan-status-error', isServiceError);
+
+        unfreezeCapturedFrame();   // NEW — back to live video so they can reposition and retry
+        scanCaptureBtn.disabled = false;
+        scanCaptureBtn.textContent = '🔁 Try Again';
+
     } catch (err) {
         scanStatus.textContent = '❌ Error: ' + err.message;
+        scanStatus.classList.add('scan-status-error');
+        unfreezeCapturedFrame();
         scanCaptureBtn.disabled = false;
+        scanCaptureBtn.textContent = '🔁 Try Again';
     }
 }
 
@@ -293,6 +401,13 @@ async function init() {
     document.getElementById('scan-btn').addEventListener('click', openScanOverlay);
     scanCancelBtn.addEventListener('click', closeScanOverlay);
     scanCaptureBtn.addEventListener('click', handleCapture);
+
+
+    scanUploadInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    handleUpload(file);
+    scanUploadInput.value = '';
+});
 
     document.getElementById('trash-restore-all-btn')?.addEventListener('click', async () => {
         const confirmed = await showConfirm('♻️ Restore All', 'Restore all items from trash?');

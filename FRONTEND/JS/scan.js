@@ -192,7 +192,7 @@ function canvasToBlob(canvasElement) {
     });
 }
 
-async function classifyWithBackend(imageBlob) {
+export async function classifyWithBackend(imageBlob) {
     const formData = new FormData();
     formData.append('image', imageBlob, 'injury-capture.jpg');
 
@@ -223,7 +223,8 @@ async function classifyWithBackend(imageBlob) {
 export async function captureAndClassify(
     videoElement,
     canvasElement,
-    onResult
+    onResult,
+    onCaptured
 ) {
     if (videoElement.paused && videoElement.srcObject) {
         try {
@@ -257,6 +258,11 @@ export async function captureAndClassify(
     // Used only for displaying the current result in the UI.
     // It is not sent to localStorage unless SAVE_SCANS_LOCALLY is enabled.
     const imageData = canvasElement.toDataURL('image/jpeg', 0.75);
+    
+    // NEW — let the caller switch UI states here
+    if (typeof onCaptured === 'function') {
+        onCaptured();
+    }
 
     try {
         const result = await classifyWithBackend(imageBlob);

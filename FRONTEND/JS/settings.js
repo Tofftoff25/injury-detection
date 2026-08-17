@@ -169,7 +169,7 @@ const TRANSLATIONS = {
     scanInstruction: "I-tapat ang camera sa sugat at huwag gagalaw...",
     scanCapture: "📸 Kunan at I-analisa",
     scanCancel: "Kanselahin",
-    scanLoadingModel: "Ika-lo-load ang AI model...",
+    scanLoadingModel: "Nilo-load ang AI model...",
     scanNoModel: "Wala pang trained model. Gamitin ang Search.",
     scanNoCamera: "Hindi ma-access ang camera. Gamitin ang Search.",
     scanAnalyzing: "Sinusuri...",

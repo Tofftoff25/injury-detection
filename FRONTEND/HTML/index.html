@@ -245,7 +245,9 @@
 
           <div class="settings-group">
             <label class="settings-label">Screensaver</label>
-            <button type="button" id="settings-afk-btn" class="btn btn-back" style="margin: 0;">🖥️ Start Screensaver</button>
+            <button type="button" id="afk-toggle" class="toggle-switch" role="switch" aria-checked="false" aria-label="Toggle screensaver mode">
+              <span class="toggle-knob"></span>
+            </button>
           </div>
         </section>
 
@@ -317,6 +319,11 @@
     <div class="scan-actions">
       <button id="scan-capture-btn" class="btn btn-primary scan-capture-btn" data-i18n="scanCapture">📸 Capture &amp; Analyze</button>
       <button id="scan-cancel-btn" class="btn btn-back" data-i18n="scanCancel">Cancel</button>
+    </div>
+    <div class="scan-upload-row">
+      <span class="scan-upload-divider">or</span>
+      <label for="scan-upload-input" class="btn btn-back scan-upload-btn">📁 Upload a Photo</label>
+      <input type="file" id="scan-upload-input" accept="image/jpeg,image/png,image/webp" class="hidden">
     </div>
   </div>
 </div>

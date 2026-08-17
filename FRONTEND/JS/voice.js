@@ -79,7 +79,7 @@ function resetSpeechState() {
     updateSpeakingUI(false);
 }
 
-export function speakCurrentStep(callback) {
+export function speakCurrentStep(callback, sessionOverride) {
     if (speechSuppressed) return;
     if (!state.currentInjuryData) return callback?.();
     if (Date.now() < speechBlockedUntil) return;
@@ -88,7 +88,12 @@ export function speakCurrentStep(callback) {
     const idx = state.currentStepIndex;
     if (!steps[idx]) return callback?.();
 
-    const session = ++speechSession;
+    // When called as part of an ongoing speakAllSteps() sequence, reuse
+    // that sequence's session id instead of minting a new one — otherwise
+    // the sequence's own "is this still the active session?" check would
+    // permanently fail after the very first step, silently stopping
+    // playback (this was the "only reads step 1" bug).
+    const session = sessionOverride !== undefined ? sessionOverride : ++speechSession;
     clearSpeechTimer();
     cancelBrowserSpeech();
     resetSpeechState();
@@ -167,7 +172,7 @@ export function speakAllSteps() {
                 speechTimer = null;
                 if (runSession === speechSession) speakNext();
             }, 350);
-        });
+        }, runSession);
     };
 
     speakNext();
