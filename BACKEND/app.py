@@ -15,7 +15,8 @@ import hashlib
 import uuid
 import requests
 from dotenv import load_dotenv
-from PIL import Image
+from PIL import Image, ImageOps
+from local_detector import load_detector_from_env, LocalDetectorError
 import io
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -30,31 +31,28 @@ app.logger.setLevel(logging.INFO)
 load_dotenv()
 
 # ---------------------------------------------------------------------------
-# SCAN / ROBOFLOW CONFIGURATION
+# SCAN 
 # ---------------------------------------------------------------------------
 
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10 MB upload limit
 
-ROBOFLOW_API_KEY = os.getenv("ROBOFLOW_API_KEY", "").strip()
-ROBOFLOW_API_URL = os.getenv(
-    "ROBOFLOW_API_URL",
-    "https://serverless.roboflow.com"
-).rstrip("/")
+# Local TFLite detector — loaded once at startup, reused for every
+# /api/scan request. No internet, no API key, no per-request network
+# call. If the model file is missing, `detector` will be None and
+# /api/scan/status will correctly report the scan feature as
+# unavailable rather than crashing the whole app.
+detector = load_detector_from_env(
+    default_model_path=os.path.join(FRONTEND_DIR, "MODEL", "injury-baseline.tflite"),
+    default_labels_path=os.path.join(FRONTEND_DIR, "MODEL", "labels.json"),
+)
 
-ROBOFLOW_WORKSPACE = os.getenv(
-    "ROBOFLOW_WORKSPACE",
-    "ffotatoff"
-).strip()
-
-ROBOFLOW_WORKFLOW_ID = os.getenv(
-    "ROBOFLOW_WORKFLOW_ID",
-    "visible-injury-baseline-1786672508728"
-).strip()
-
-SCAN_REQUEST_TIMEOUT_SECONDS = 45
-SCAN_MAX_RETRIES = 2  # total attempts = 1 + SCAN_MAX_RETRIES
-SCAN_RETRY_BACKOFF_SECONDS = 1.5  # doubles each retry: 1.5s, 3s, ...
-
+if detector is None:
+    app.logger.warning(
+        "Local detector failed to load — scanning will be unavailable "
+        "until FRONTEND/MODEL/injury-baseline.tflite is present."
+    )
+else:
+    app.logger.info("Local TFLite detector loaded. Labels: %s", detector.labels)
 # Where annotated images returned by the workflow are written to disk.
 # Already covered by .gitignore's "captures/" entry.
 ANNOTATED_IMAGE_DIR = os.path.join(BASE_DIR, "captures", "annotated")
@@ -64,18 +62,6 @@ ALLOWED_IMAGE_TYPES = {
     "image/png",
     "image/webp",
 }
-
-
-class RoboflowConfigError(RuntimeError):
-    """Raised when the Roboflow integration is missing required config."""
-
-
-class RoboflowTimeoutError(RuntimeError):
-    """Raised when every attempt to call the Workflow timed out."""
-
-
-class RoboflowServiceError(RuntimeError):
-    """Raised when the Workflow call failed for a non-timeout reason."""
 
 # Maps model labels to keys in injuries.json
 MODEL_TO_INJURY_KEY = {
@@ -258,98 +244,6 @@ def search_suggestions(query):
             matches.add(mapped)
     return sorted(matches)
 
-def save_annotated_image(output_image):
-    """
-    If the Workflow returned an image-shaped output (e.g. an annotated
-    preview), decode it and write it to disk. The base64 payload is never
-    logged and is dropped from memory as soon as the file is written.
-
-    Returns the saved file's path, or None if there was nothing to save.
-    """
-    if not isinstance(output_image, dict):
-        return None
-
-    encoded = output_image.get("value")
-    if not encoded:
-        return None
-
-    try:
-        image_bytes = base64.b64decode(encoded)
-    except (ValueError, TypeError):
-        app.logger.warning("Could not decode the workflow's annotated image.")
-        return None
-    finally:
-        # Drop the (large) base64 string as soon as we're done with it.
-        encoded = None
-
-    os.makedirs(ANNOTATED_IMAGE_DIR, exist_ok=True)
-    filepath = os.path.join(ANNOTATED_IMAGE_DIR, f"{uuid.uuid4().hex}.jpg")
-
-    with open(filepath, "wb") as f:
-        f.write(image_bytes)
-
-    # Don't hold the decoded bytes in memory any longer than needed.
-    image_bytes = None
-
-    return filepath
-
-def parse_workflow_response(payload):
-    """
-    Parse a Roboflow Workflows response into a small, safe dict.
-
-    The API returns a list with one entry per input image; each entry is
-    a dict keyed by the workflow's own output names. Grounded against a
-    real "Visible Injury Baseline" response, those names are:
-      - predicted_class (str)
-      - confidence (float)
-      - supported (bool)
-      - predictions: {"image": {...}, "predictions": [detections]}
-      - output_image: {"type": "base64", "value": "...", ...}  (optional)
-
-    Detections are bounding boxes (x/y/width/height), not segmentation
-    polygons, so there are no raw "points" to strip. We still only keep
-    the fields the frontend actually reads.
-    """
-    if isinstance(payload, list):
-        if not payload:
-            raise RoboflowServiceError("Workflow returned an empty result.")
-        entry = payload[0]
-    elif isinstance(payload, dict):
-        entry = payload
-    else:
-        raise RoboflowServiceError("Workflow returned an unexpected response.")
-
-    if not isinstance(entry, dict):
-        raise RoboflowServiceError("Workflow returned an unexpected response.")
-
-    detections_block = entry.get("predictions")
-    raw_detections = []
-    if isinstance(detections_block, dict):
-        raw_detections = detections_block.get("predictions", [])
-    if not isinstance(raw_detections, list):
-        raw_detections = []
-
-    detections = [
-        {
-            "class": det.get("class"),
-            "confidence": det.get("confidence"),
-            "x": det.get("x"),
-            "y": det.get("y"),
-            "width": det.get("width"),
-            "height": det.get("height"),
-        }
-        for det in raw_detections
-        if isinstance(det, dict)
-    ]
-
-    return {
-        "predicted_class": entry.get("predicted_class"),
-        "confidence": entry.get("confidence"),
-        "supported": entry.get("supported"),
-        "detections": detections,
-        "annotated_image_path": save_annotated_image(entry.get("output_image")),
-    }
-
 def normalize_model_label(value):
     return str(value or "").strip().lower()
 
@@ -369,104 +263,16 @@ def normalize_to_jpeg(image_bytes):
     Roboflow's inference backend has been unreliable with non-JPEG
     input (e.g. WebP) in testing, so we normalize everything before
     sending it, regardless of the original upload format.
+
+    EXIF orientation is applied so photos from phone cameras are not
+    sent to the model sideways or upside down.
     """
     with Image.open(io.BytesIO(image_bytes)) as img:
+        img = ImageOps.exif_transpose(img)
         img = img.convert("RGB")  # drops alpha channel if present, e.g. PNG
         buffer = io.BytesIO()
         img.save(buffer, format="JPEG", quality=90)
         return buffer.getvalue()
-
-def run_injury_workflow(image_bytes):
-    """
-    Run the "Visible Injury Baseline" Workflow against one image and
-    return its parsed, size-trimmed output. Retries a couple of times
-    with backoff on timeouts, connection errors, and 5xx responses;
-    fails immediately on 4xx (bad request / auth) responses.
-
-    Raises:
-        RoboflowConfigError: the API key is not configured.
-        RoboflowTimeoutError: every attempt timed out.
-        RoboflowServiceError: every attempt failed for another reason,
-            or the workflow returned a client error.
-    """
-    if not ROBOFLOW_API_KEY:
-        raise RoboflowConfigError(
-            "ROBOFLOW_API_KEY is not configured on the Flask server."
-        )
-
-    jpeg_bytes = normalize_to_jpeg(image_bytes)
-    encoded_image = base64.b64encode(jpeg_bytes).decode("ascii")
-
-    endpoint = f"{ROBOFLOW_API_URL}/infer/workflows/{ROBOFLOW_WORKSPACE}/{ROBOFLOW_WORKFLOW_ID}"
-
-    payload = {
-        "api_key": ROBOFLOW_API_KEY,
-        "inputs": {
-            "image": {
-                "type": "base64",
-                "value": encoded_image,
-            }
-        },
-    }
-
-    total_attempts = SCAN_MAX_RETRIES + 1
-    last_error = None
-    timed_out = False
-
-    for attempt in range(total_attempts):
-        try:
-            response = requests.post(
-                endpoint,
-                json=payload,
-                timeout=SCAN_REQUEST_TIMEOUT_SECONDS,
-            )
-        except requests.Timeout as exc:
-            last_error = exc
-            timed_out = True
-            app.logger.warning(
-                "Roboflow Workflow timed out (attempt %s/%s).",
-                attempt + 1, total_attempts,
-            )
-        except requests.RequestException as exc:
-            last_error = exc
-            timed_out = False
-            app.logger.warning(
-                "Roboflow Workflow request failed (attempt %s/%s): %s",
-                attempt + 1, total_attempts, exc,
-            )
-        else:
-            if response.status_code >= 500:
-                last_error = requests.HTTPError(f"{response.status_code} server error")
-                timed_out = False
-                app.logger.warning(
-                    "Roboflow Workflow returned %s (attempt %s/%s).",
-                    response.status_code, attempt + 1, total_attempts,
-                )
-            else:
-                try:
-                    response.raise_for_status()
-                except requests.HTTPError as exc:
-                    app.logger.error(
-                        "Roboflow Workflow rejected the request with status %s: %s",
-                        response.status_code,
-                        response.text[:500],
-                    )
-                    raise RoboflowServiceError(
-                        "The injury analysis service rejected the request."
-                    ) from exc
-
-                return parse_workflow_response(response.json())
-
-        if attempt < total_attempts - 1:
-            time.sleep(SCAN_RETRY_BACKOFF_SECONDS * (2 ** attempt))
-
-    if timed_out:
-        raise RoboflowTimeoutError(
-            "The injury analysis service timed out."
-        ) from last_error
-    raise RoboflowServiceError(
-        "The injury analysis service is unavailable."
-    ) from last_error
 
 # ---------------------------------------------------------------------------
 # ROUTES WITH IMPROVED ERROR HANDLING
@@ -558,20 +364,12 @@ def api_injury_detail(key):
 
 @app.route("/api/scan/status", methods=["GET"])
 def api_scan_status():
-    """Let the frontend check whether laptop testing is configured."""
-    configured = bool(
-        ROBOFLOW_API_KEY
-        and ROBOFLOW_WORKSPACE
-        and ROBOFLOW_WORKFLOW_ID
-    )
-
+    """Let the frontend check whether the local model is loaded and ready."""
     return jsonify({
-        "available": configured,
-        "runtime": "roboflow-workflow",
-        "workflow_configured": configured,
+        "available": detector is not None,
+        "runtime": "local-tflite",
+        "offline_capable": True,
     })
-
-
 
 @app.route("/api/scan", methods=["POST"])
 def api_scan():
@@ -581,7 +379,7 @@ def api_scan():
     stable contract that can later be implemented by a local TFLite runtime.
     """
     try:
-        if not ROBOFLOW_API_KEY:
+        if detector is None:
             return jsonify({
                 "success": False,
                 "supported": False,
@@ -617,10 +415,6 @@ def api_scan():
             "Scan upload: bytes=%d content_type=%s sha256=%s",
             len(image_bytes), uploaded.mimetype, hashlib.sha256(image_bytes).hexdigest(),
         )
-
-        debug_path = os.path.join(BASE_DIR, "debug-last-scan.jpg")
-        with open(debug_path, "wb") as debug_file:
-            debug_file.write(image_bytes)
         
         if not image_bytes:
             return jsonify({
@@ -631,8 +425,9 @@ def api_scan():
                 "error": "The uploaded image is empty.",
             }), 400
 
-        result = run_injury_workflow(image_bytes)
-        app.logger.info("Roboflow raw result: %s", result)
+        jpeg_bytes = normalize_to_jpeg(image_bytes)
+        result = detector.predict(jpeg_bytes)
+        app.logger.info("Local detector raw result: %s", result)
 
         model_class = str(result.get("predicted_class", "unsupported")).strip()
 
@@ -675,28 +470,8 @@ def api_scan():
 
         return jsonify(response_data)
 
-    except RoboflowConfigError as exc:
-        app.logger.error("Roboflow is not configured: %s", exc)
-        return jsonify({
-            "success": False,
-            "supported": False,
-            "predicted_class": "unsupported",
-            "confidence": 0.0,
-            "error": "The scan service is not configured.",
-        }), 503
-
-    except RoboflowTimeoutError as exc:
-        app.logger.warning("Roboflow Workflow request timed out: %s", exc)
-        return jsonify({
-            "success": False,
-            "supported": False,
-            "predicted_class": "unsupported",
-            "confidence": 0.0,
-            "error": "Analysis timed out. Please try again.",
-        }), 504
-
-    except RoboflowServiceError as exc:
-        app.logger.error("Roboflow Workflow call failed: %s", exc)
+    except LocalDetectorError as exc:
+        app.logger.error("Local detector failed: %s", exc)
         return jsonify({
             "success": False,
             "supported": False,

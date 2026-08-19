@@ -10,10 +10,12 @@ venv/
 *.tflite
 *.pt
 *.onnx
+!FRONTEND/MODEL/injury-baseline.tflite
 
 captures/
 uploads/
 instance/
+debug-last-scan.jpg
 
 .DS_Store
 Thumbs.db
