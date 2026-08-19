@@ -1,5 +1,7 @@
-A.I.D.E. - AI-Guided Instructional Device for Emergencies
-Overview
+# A.I.D.E. - AI-Guided Instructional Device for Emergencies
+
+# Overview
+
 A.I.D.E. is a touchscreen-based first-aid guidance system designed for emergency situations. It provides step-by-step instructions for treating common injuries, with support for voice guidance, camera scanning, and multiple languages (English/Filipino).
 Features
 
