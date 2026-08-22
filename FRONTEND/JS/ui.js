@@ -133,6 +133,79 @@ export function showHomeScreen() {
 let stepObserver = null;
 let isProcedureComplete = false;
 
+// Guards against a race between the scroll animation and the CSS
+// flex-basis resize transition on cards: after we programmatically
+// scroll to a step, the target card keeps growing/shrinking neighbors
+// for ~350ms even once the scroll itself has physically stopped. If the
+// free-swipe "settle" observer below measured "closest card to center"
+// during that window, it could catch a neighboring card mid-resize and
+// briefly mistake it for the real target — flashing it into focus
+// before snapping back. Setting this flag while a programmatic nav is
+// in flight tells the observer to trust the target we already know is
+// correct instead of re-deriving it from (possibly still-settling)
+// geometry.
+let isSyncingScroll = false;
+let syncingScrollTimer = null;
+
+// Drives a custom frame-by-frame scroll animation (see
+// animateScrollToCenter below) instead of a single scrollIntoView() call.
+let scrollAnimFrame = null;
+let scrollAnimToken = 0;
+
+function prefersReducedMotion() {
+    return typeof window.matchMedia === 'function'
+        && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+// Centers `target` in the track by re-measuring its actual on-screen
+// position every animation frame, rather than computing one fixed
+// destination up front. This matters specifically because the target
+// card is usually ALSO mid-resize (its flex-basis is CSS-transitioning
+// to its "current" size) at the same time we're scrolling to it: a
+// single scrollIntoView() call reads the card's geometry at the instant
+// it's called, which is still its pre-resize (smaller) size — the CSS
+// transition hasn't advanced yet — so it aims at a stale, undersized
+// target. The browser's mandatory scroll-snap then has to silently
+// correct the final position once the resize actually finishes, and
+// that extra corrective scroll fires its own 'scroll' events, sometimes
+// arriving late enough to slip past the settle-observer's guard and
+// make it briefly (and incorrectly) focus a neighboring card. Tracking
+// the live position every frame means we're always chasing where the
+// card actually is, so we arrive exactly centered the moment it
+// finishes growing, with no separate correction needed afterward.
+function animateScrollToCenter(target, maxDuration = 500) {
+    if (scrollAnimFrame) cancelAnimationFrame(scrollAnimFrame);
+    const token = ++scrollAnimToken;
+    const start = performance.now();
+
+    // scroll-behavior:smooth on the track would otherwise re-animate
+    // (and badly compound) every one of our own per-frame nudges.
+    const prevScrollBehavior = carouselSlide.style.scrollBehavior;
+    carouselSlide.style.scrollBehavior = 'auto';
+
+    function finish() {
+        carouselSlide.style.scrollBehavior = prevScrollBehavior || '';
+        scrollAnimFrame = null;
+    }
+
+    function step(now) {
+        if (token !== scrollAnimToken) { finish(); return; } // superseded by a newer nav
+        const trackRect = carouselSlide.getBoundingClientRect();
+        const targetRect = target.getBoundingClientRect();
+        const offset = (targetRect.left + targetRect.width / 2) - (trackRect.left + trackRect.width / 2);
+        const elapsed = now - start;
+
+        if (elapsed >= maxDuration || Math.abs(offset) < 0.5) {
+            carouselSlide.scrollLeft += offset; // final snap-to-exact, imperceptibly small by now
+            finish();
+            return;
+        }
+        carouselSlide.scrollLeft += offset * 0.25;
+        scrollAnimFrame = requestAnimationFrame(step);
+    }
+    scrollAnimFrame = requestAnimationFrame(step);
+}
+
 function cleanStepTitle(title, index) {
     let value = String(title || '').trim();
     if (!value) return '';
@@ -166,15 +239,54 @@ function stepMarkup(step, index, data) {
       </article>`;
 }
 
+// Permanent framing cards before step 1 and after the last step. They
+// exist purely so the first and last real steps can be genuinely
+// centered — something real to peek at on that side — instead of the
+// earlier approach of reserving blank track padding, which just read as
+// a broken empty card. They share the .carousel-slide-item class (so
+// the shared flex/transition rules apply) but are marked
+// .carousel-bookend and excluded from every ":not(.carousel-bookend)"
+// query below, so all the existing step-index math is untouched.
+function bookendMarkup(kind, data) {
+    if (kind === 'start') {
+        const imgHtml = data.icon
+            ? `<img src="${data.icon}" alt="" onerror="this.style.display='none'">`
+            : '';
+        return `
+          <article class="carousel-slide-item carousel-bookend carousel-bookend-start" aria-hidden="true">
+            <div class="carousel-step-illustration">${imgHtml}</div>
+            <div class="carousel-bookend-title">${data.name || 'Guide'}</div>
+            <div class="carousel-bookend-text">${data.steps.length}-step guide. Swipe or tap Next to begin.</div>
+          </article>`;
+    }
+    // Reuses the existing .carousel-complete styling (icon pop animation,
+    // heading/paragraph rules, button shadow, dark-mode overrides) so
+    // there's one visual definition of "completion," not two.
+    return `
+      <article class="carousel-slide-item carousel-bookend carousel-bookend-end carousel-complete" aria-label="End of guide">
+        <div class="carousel-complete-icon">✅</div>
+        <h3>End of Steps</h3>
+        <p>You've completed all steps for ${data.name || 'this guide'}.</p>
+        <button id="restart-procedure-btn" class="btn btn-primary" type="button">🔄 Restart</button>
+      </article>`;
+}
+
 function renderAllSteps() {
     const data = state.currentInjuryData;
     if (!data?.steps?.length) return;
 
-    carouselSlide.innerHTML = data.steps.map((step, i) => stepMarkup(step, i, data)).join('');
+    carouselSlide.innerHTML =
+        bookendMarkup('start', data) +
+        data.steps.map((step, i) => stepMarkup(step, i, data)).join('') +
+        bookendMarkup('end', data);
 
-    // Make every card tappable — tap a peeking/neighboring card to jump
-    // straight to it instead of only being able to swipe or use Next/Prev.
-    carouselSlide.querySelectorAll('.carousel-slide-item').forEach((card, i) => {
+    // Make every REAL step card tappable — tap a peeking/neighboring
+    // card to jump straight to it. Bookends are framing, not steps, so
+    // they're excluded here (and everywhere below) rather than counted
+    // as fake step -1 / step N — this keeps every index the same
+    // "0..steps.length-1" meaning it always had, with no off-by-one
+    // bookkeeping anywhere else in the module.
+    carouselSlide.querySelectorAll('.carousel-slide-item:not(.carousel-bookend)').forEach((card, i) => {
         card.style.cursor = 'pointer';
         card.setAttribute('tabindex', '0');
         card.setAttribute('role', 'button');
@@ -204,6 +316,14 @@ function renderAllSteps() {
         carouselDots.appendChild(dot);
     });
 
+    document.getElementById('restart-procedure-btn')?.addEventListener('click', () => {
+        isProcedureComplete = false;
+        const endCard = carouselSlide.querySelector('.carousel-bookend-end');
+        endCard?.classList.remove('is-current');
+        endCard?.removeAttribute('data-distance');
+        goToStep(0);
+    });
+
     setupStepObserver();
 }
 
@@ -212,7 +332,7 @@ function setupStepObserver() {
         carouselSlide.removeEventListener('scroll', stepObserver);
         stepObserver = null;
     }
-    const items = carouselSlide.querySelectorAll('.carousel-slide-item');
+    const items = carouselSlide.querySelectorAll('.carousel-slide-item:not(.carousel-bookend)');
     if (!items.length) return;
 
     let settleTimer = null;
@@ -222,7 +342,12 @@ function setupStepObserver() {
         // intermediate scroll frame — avoids picking a transient card
         // mid-swipe and only commits once the snap has landed.
         settleTimer = setTimeout(() => {
-            const liveItems = carouselSlide.querySelectorAll('.carousel-slide-item');
+            // A programmatic nav (Next/Prev/dot/tap-to-jump) already set
+            // the correct step directly — don't let this re-derive it
+            // from geometry while cards may still be mid-resize.
+            if (isSyncingScroll) return;
+
+            const liveItems = carouselSlide.querySelectorAll('.carousel-slide-item:not(.carousel-bookend)');
             if (!liveItems.length) return;
             const trackRect = carouselSlide.getBoundingClientRect();
             const trackCenter = trackRect.left + trackRect.width / 2;
@@ -253,8 +378,26 @@ function updateProgressUI(index, total) {
     const dots = carouselDots.querySelectorAll('.carousel-dot');
     dots.forEach((d, i) => d.classList.toggle('active', i === index));
 
-    const items = carouselSlide.querySelectorAll('.carousel-slide-item');
-    items.forEach((item, i) => item.classList.toggle('is-current', i === index));
+    // Bookends never participate in normal step navigation — reset any
+    // "complete screen" state left over from a previous visit so they
+    // fall back to their default small peek styling. showProcedureComplete()
+    // re-applies the current/large treatment to the end bookend when
+    // it's actually the one being landed on.
+    carouselSlide.querySelectorAll('.carousel-bookend').forEach(b => {
+        b.classList.remove('is-current');
+        b.removeAttribute('data-distance');
+    });
+
+    const items = carouselSlide.querySelectorAll('.carousel-slide-item:not(.carousel-bookend)');
+    items.forEach((item, i) => {
+        item.classList.toggle('is-current', i === index);
+
+        // Distance-based sizing: current step reads as the focal card,
+        // with immediate neighbors peeking in smaller and everything
+        // further out smaller still (see CSS [data-distance] rules).
+        const dist = Math.abs(i - index);
+        item.dataset.distance = dist === 0 ? '0' : dist === 1 ? '1' : 'far';
+    });
 
     // Move focus to the current step card so screen readers / the voice
     // assistant announce it as guidance advances, not just the first card.
@@ -265,14 +408,36 @@ function updateProgressUI(index, total) {
 }
 
 function scrollToStep(index, behavior = 'smooth') {
-    const items = carouselSlide.querySelectorAll('.carousel-slide-item');
+    const items = carouselSlide.querySelectorAll('.carousel-slide-item:not(.carousel-bookend)');
     const total = items.length;
     if (!total) return;
     index = Math.max(0, Math.min(index, total - 1));
+
+    // Apply the current/near/far sizing FIRST so the browser lays out
+    // cards at their target widths before we measure where to scroll —
+    // otherwise the resize and the scroll target would be computed
+    // against stale (pre-resize) positions and drift out of alignment.
+    updateProgressUI(index, total);
+
     const target = items[index];
     if (!target) return;
-    carouselSlide.scrollTo({ left: target.offsetLeft - carouselSlide.offsetLeft, behavior });
-    updateProgressUI(index, total);
+
+    // Suppress the free-swipe settle observer for long enough to cover
+    // both the scroll animation and the ~350ms CSS resize transition
+    // (see the isSyncingScroll comment above).
+    isSyncingScroll = true;
+    clearTimeout(syncingScrollTimer);
+    syncingScrollTimer = setTimeout(() => { isSyncingScroll = false; }, 600);
+
+    // Center the current card in the track — this is what lets the
+    // previous step (or the start bookend, for step 1) peek in on the
+    // left and the next step (or the end bookend, for the last step)
+    // peek in on the right, simultaneously, at every position.
+    if (behavior === 'auto' || prefersReducedMotion()) {
+        target.scrollIntoView({ behavior: 'auto', inline: 'center', block: 'nearest' });
+    } else {
+        animateScrollToCenter(target);
+    }
 }
 
 function showProcedureComplete() {
@@ -280,19 +445,41 @@ function showProcedureComplete() {
     isProcedureComplete = true;
     stopSpeaking();
     clearAutoSlideTimer();
-    carouselSlide.insertAdjacentHTML('beforeend', `
-        <div class="carousel-slide-item carousel-complete">
-            <div class="carousel-complete-icon">✅</div>
-            <h3>Procedure Complete</h3>
-            <p>You have completed all steps for ${state.currentInjuryData.name}.</p>
-            <button id="restart-procedure-btn" class="btn btn-primary">🔄 Restart</button>
-        </div>`);
-    document.getElementById('restart-procedure-btn')?.addEventListener('click', () => {
-        isProcedureComplete = false;
-        renderAllSteps();
-        goToStep(0);
+
+    // Demote whichever real step was current — updateProgressUI isn't
+    // called on this path, so without this the last real step would
+    // stay large/bordered at the same time as the end bookend. Give the
+    // trailing steps the same near/far peek treatment any neighbor gets,
+    // using "total" as the end bookend's virtual position.
+    const total = state.currentInjuryData?.steps?.length || 0;
+    const items = carouselSlide.querySelectorAll('.carousel-slide-item:not(.carousel-bookend)');
+    items.forEach((item, i) => {
+        item.classList.remove('is-current');
+        item.dataset.distance = (total - i) === 1 ? '1' : 'far';
     });
-    carouselSlide.lastElementChild.scrollIntoView({ behavior: 'smooth', inline: 'start' });
+
+    // The end bookend is always in the DOM (rendered once, in
+    // renderAllSteps) — reaching the end just means scrolling to it and
+    // promoting it to "current" sizing, the same large/focal treatment
+    // a real step gets, rather than leaving it at its small peek size.
+    const endCard = carouselSlide.querySelector('.carousel-bookend-end');
+    if (endCard) {
+        endCard.classList.add('is-current');
+        endCard.dataset.distance = '0';
+
+        // Same settle-observer guard as scrollToStep — without it, the
+        // observer could catch the last real step mid-shrink and flash
+        // it back into focus before this scroll actually lands.
+        isSyncingScroll = true;
+        clearTimeout(syncingScrollTimer);
+        syncingScrollTimer = setTimeout(() => { isSyncingScroll = false; }, 600);
+
+        if (prefersReducedMotion()) {
+            endCard.scrollIntoView({ behavior: 'auto', inline: 'center', block: 'nearest' });
+        } else {
+            animateScrollToCenter(endCard);
+        }
+    }
     carouselProgress.textContent = 'Complete';
     carouselPrev.disabled = true;
     carouselNext.disabled = true;

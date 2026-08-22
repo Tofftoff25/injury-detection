@@ -1748,6 +1748,7 @@ html[data-dark="true"] .app-header .header-title h1 {
 .carousel-slide {
   display: flex !important;
   flex-direction: row !important;
+  align-items: flex-start !important;
   overflow-x: auto !important;
   scroll-snap-type: x mandatory !important;
   scroll-behavior: smooth;
@@ -1766,7 +1767,7 @@ html[data-dark="true"] .app-header .header-title h1 {
 }
 
 .carousel-slide .carousel-slide-item {
-  scroll-snap-align: start;
+  scroll-snap-align: center;
   /* scroll-snap-stop: always removed — per spec it forces BOTH user
      flicks AND programmatic scrollTo() jumps (tapping a distant card,
      clicking a distant dot) to stop at every intermediate snap point
@@ -1806,6 +1807,189 @@ html[data-dark="true"] .app-header .header-title h1 {
   border-color: var(--accent);
   box-shadow: 0 12px 28px -10px rgba(79, 110, 247, 0.35), 0 0 0 3px rgba(79, 110, 247, 0.14);
   transform: translateY(-2px);
+}
+
+/* Current card's icon gets real room to breathe — it fills the whole
+   available track height (see the instruction-active override further
+   down), so the base 88px icon was small relative to all that space. */
+.carousel-slide .carousel-slide-item.is-current .carousel-step-illustration {
+  width: 120px !important;
+  height: 120px !important;
+}
+.carousel-slide .carousel-slide-item.is-current .carousel-step-illustration img {
+  width: 66px !important;
+  height: 66px !important;
+}
+
+/* ---------------------------------------------------------------------
+   Bookend cards — permanent, mostly non-interactive framing cards
+   before step 1 and after the last step (rendered by ui.js in
+   renderAllSteps, always present, never inserted/removed at runtime).
+   They exist purely so the first and last real steps can be genuinely
+   centered — something real to peek at on that side — instead of the
+   earlier approach of reserving blank track padding, which just read
+   as a broken empty card rather than a deliberate space.
+
+   scroll-snap-align: none keeps them OUT of the mandatory snap points
+   by default — you can see them and free-scroll a little into them,
+   but releasing a swipe always resolves back onto a real step, so the
+   user can never get stranded on a bookend. The one exception is the
+   end bookend once the guide is actually complete (ui.js adds
+   .is-current there), which becomes a real, centered, full-size snap
+   target — the same treatment a real "current" step gets — via the
+   more specific ".is-current" override below and the existing
+   [data-distance="0"] rule further down (which wins the size tie by
+   coming later in the cascade).
+   --------------------------------------------------------------------- */
+.carousel-slide .carousel-bookend {
+  scroll-snap-align: none;
+  flex-basis: 22% !important;
+  opacity: 0.65;
+  justify-content: center !important;
+  text-align: center !important;
+  cursor: default;
+}
+.carousel-slide .carousel-bookend.is-current {
+  scroll-snap-align: center;
+  opacity: 1;
+}
+.carousel-slide .carousel-bookend.carousel-complete {
+  /* Overrides the legacy .carousel-complete full-width rule further
+     down — three classes here beats its two regardless of source order. */
+  flex-basis: 22% !important;
+}
+.carousel-bookend-title {
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.carousel-bookend-text {
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+/* End bookend, while still just peeking (not yet reached): shrink the
+   reused .carousel-complete content and hide the Restart button so a
+   tiny, easily-mistapped button isn't sitting in view before the guide
+   is actually finished. Once .is-current is added, none of this
+   applies and the original full-size completion styling (further down
+   this file) takes over automatically. */
+.carousel-slide .carousel-bookend-end:not(.is-current) .carousel-complete-icon {
+  font-size: 1.8rem;
+  margin-bottom: 4px;
+  animation: none;
+}
+.carousel-slide .carousel-bookend-end:not(.is-current) h3 {
+  font-size: 0.82rem;
+  margin: 0 0 2px;
+}
+.carousel-slide .carousel-bookend-end:not(.is-current) p {
+  font-size: 0.7rem;
+  margin: 2px 0 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.carousel-slide .carousel-bookend-end:not(.is-current) .btn {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .carousel-slide .carousel-bookend { flex-basis: 28% !important; }
+  .carousel-slide .carousel-bookend.carousel-complete { flex-basis: 28% !important; }
+}
+@media (max-width: 560px) {
+  .carousel-slide .carousel-bookend { flex-basis: 34% !important; }
+  .carousel-slide .carousel-bookend.carousel-complete { flex-basis: 34% !important; }
+}
+
+/* ---------------------------------------------------------------------
+   Distance-based sizing: the current step reads as the focal card,
+   centered in the track (scroll-snap-align: center above), with the
+   immediate next/prev step peeking in smaller on either side and
+   everything further out smaller still. ui.js sets [data-distance] on
+   each card (0 / 1 / far) whenever the current step changes, since a
+   pure CSS sibling combinator can only see cards in one direction.
+   Step 1 and the last step simply end up scrolled as far as the track
+   allows rather than perfectly centered — there's nothing to peek at
+   on that side anyway, so this is left to the browser's natural
+   scroll-snap clamping rather than reserving artificial empty space,
+   which read as a broken blank card instead of a deliberate space.
+   --------------------------------------------------------------------- */
+.carousel-slide .carousel-slide-item {
+  transition: flex-basis 0.35s cubic-bezier(0.22, 0.8, 0.28, 1),
+              transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.carousel-slide .carousel-slide-item[data-distance="0"] {
+  flex-basis: 50% !important;
+}
+.carousel-slide .carousel-slide-item[data-distance="1"] {
+  flex-basis: 24% !important;
+  opacity: 0.9;
+}
+.carousel-slide .carousel-slide-item[data-distance="far"] {
+  flex-basis: 17% !important;
+  opacity: 0.72;
+}
+
+/* Peek cards (anything not current) show only a compact preview — step
+   badge, icon, and a clamped one-or-two-line snippet of the instruction
+   — rather than the full text. At their narrower widths the full text
+   was wrapping into a column taller than the shared card height and
+   spawning its own little scrollbar on every card, which is what
+   actually read as broken. Clamping instead of scrolling means there's
+   nothing to overflow, so no scrollbar ever appears on a peek card. */
+.carousel-slide .carousel-slide-item:not(.is-current) .carousel-step-illustration {
+  width: 44px !important;
+  height: 44px !important;
+  margin-bottom: 8px !important;
+}
+.carousel-slide .carousel-slide-item:not(.is-current) .carousel-step-title {
+  font-size: 0.82rem;
+}
+.carousel-slide .carousel-slide-item:not(.is-current) .carousel-step-instruction {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+.carousel-slide .carousel-slide-item:not(.is-current) .carousel-step-tip {
+  display: none;
+}
+.carousel-slide .carousel-slide-item:not(.is-current) {
+  min-height: 200px !important;
+}
+.carousel-slide .carousel-slide-item[data-distance="far"] .carousel-step-instruction {
+  -webkit-line-clamp: 1;
+}
+
+/* Keep the "Step N" pill on one line at every size — it was wrapping
+   into "Step / 4" on the narrowest peek cards. */
+.carousel-step-label {
+  white-space: nowrap;
+}
+.carousel-slide .carousel-slide-item:not(.is-current) .carousel-step-label {
+  font-size: 0.68rem;
+  padding: 3px 9px;
+}
+
+@media (max-width: 900px) {
+  .carousel-slide .carousel-slide-item[data-distance="0"] { flex-basis: 70% !important; }
+  .carousel-slide .carousel-slide-item[data-distance="1"] { flex-basis: 32% !important; }
+  .carousel-slide .carousel-slide-item[data-distance="far"] { flex-basis: 24% !important; }
+}
+@media (max-width: 560px) {
+  .carousel-slide .carousel-slide-item[data-distance="0"] { flex-basis: 90% !important; }
+  .carousel-slide .carousel-slide-item[data-distance="1"] { flex-basis: 40% !important; }
+  .carousel-slide .carousel-slide-item[data-distance="far"] { flex-basis: 30% !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .carousel-slide .carousel-slide-item { transition: none !important; }
 }
 
 .carousel-slide .carousel-complete {
@@ -1948,18 +2132,34 @@ body.instruction-active #instruction-screen .carousel-slide .carousel-slide-item
   height: 100%;
   overflow-y: auto;
 }
+/* Peek cards clamp their text (see [data-distance] rules above) so they
+   never actually overflow — force overflow-y off anyway so no browser
+   ever shows an idle scrollbar track on a card that isn't scrollable.
+
+   height:auto + align-self:flex-start (overriding the height:100% /
+   default stretch every card gets above) is the actual fix for the
+   dead space under a peek card's clamped text: without this, a peek
+   card with two short lines of text was being forced to match the
+   CURRENT card's full height, leaving a large empty gap below the
+   text instead of the card simply being shorter. */
+body.instruction-active #instruction-screen .carousel-slide .carousel-slide-item:not(.is-current) {
+  overflow-y: hidden;
+  height: auto;
+  align-self: flex-start;
+  max-height: 100%;
+}
 
 body.instruction-active #instruction-screen .carousel-nav,
 body.instruction-active #instruction-screen .carousel-controls {
   flex: 0 0 auto;
-  margin-top: 10px;
+  margin-top: 6px;
 }
 
 body.instruction-active #instruction-screen .disclaimer {
   flex: 0 0 auto;
-  margin: 8px 0 0;
+  margin: 4px 0 0;
   font-size: 0.72rem;
-  padding: 6px 10px;
+  padding: 4px 10px;
 }
 
 /* Allow horizontal panning so the native swipe/scroll-snap carousel
